@@ -1,0 +1,75 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String       @id @default(uuid()) @db.VarChar(36)
+  name          String       @db.VarChar(191)
+  email         String       @unique @db.VarChar(191)
+  password_hash String       @db.VarChar(191)
+  role          UserRole     @default(employee)
+  position      String?      @db.VarChar(191)
+  phone         String?      @db.VarChar(20)
+  employee_id   String?      @unique @db.VarChar(191)
+  salary        Decimal?     @db.Decimal(10, 2)
+  status        UserStatus   @default(active)
+  created_at    DateTime     @default(now()) @db.Timestamp(0)
+  updated_at    DateTime     @default(now()) @updatedAt @db.Timestamp(0)
+  
+  // Relasi balikan untuk attendance
+  attendances   Attendance[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  employee
+  admin
+}
+
+enum UserStatus {
+  active
+  inactive
+}
+
+model OfficeSetting {
+  id         Int      @id @default(1) @db.Int
+  name       String   @default("Kantor Pusat") @db.VarChar(191)
+  latitude   Decimal  @db.Decimal(10, 7)
+  longitude  Decimal  @db.Decimal(10, 7)
+  radius_m   Int      @default(5) @db.Int
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@map("office_settings")
+}
+
+model Attendance {
+  id            String         @id @default(uuid()) @db.VarChar(36)
+  user_id       String         @db.VarChar(36)
+  type          AttendanceType
+  photo         String         @db.Text
+  latitude      Decimal        @db.Decimal(10, 7)
+  longitude     Decimal        @db.Decimal(10, 7)
+  accuracy_m    Decimal?       @db.Decimal(10, 2)
+  distance_m    Decimal        @db.Decimal(10, 2)
+  within_radius Int            @db.SmallInt
+
+  created_at    DateTime       @default(now()) @db.Timestamp(0)
+
+  // Hubungan Foreign Key ke User
+  user          User           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([user_id], map: "idx_attendance_user")
+  @@index([created_at], map: "idx_attendance_created")
+  @@map("attendance")
+}
+
+enum AttendanceType {
+  check_in
+  check_out
+}
