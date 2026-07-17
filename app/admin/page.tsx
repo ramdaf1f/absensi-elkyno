@@ -24,12 +24,19 @@ export default async function AdminPage({
   const month = Number(sp.month) || now.getMonth() + 1
   const userId = sp.userId || ""
 
-  const [office, employees, records, holidays] = await Promise.all([
-    getOfficeSettings(),
-    listEmployees(),
-    listAttendanceByMonth(year, month, userId || undefined),
-    getHolidays(),
-  ])
+  let office, employees, records, holidays;
+  try {
+    [office, employees, records, holidays] = await Promise.all([
+      getOfficeSettings(),
+      listEmployees(),
+      listAttendanceByMonth(year, month, userId || undefined),
+      getHolidays(),
+    ])
+  } catch (error) {
+    console.error("Failed to fetch admin page data:", error);
+    // Redirect ke halaman login atau halaman error umum jika pengambilan data gagal
+    redirect("/login?error=data_fetch_failed");
+  }
 
   const validCount = records.filter((r) => r.withinRadius).length
   const outCount = records.length - validCount

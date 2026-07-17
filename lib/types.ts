@@ -45,3 +45,9 @@ export interface AttendanceWithUser extends AttendanceRecord {
   userName: string
   userEmail: string
 }
+
+export interface Holiday {
+  id: string
+  date: string
+  description: string
+}

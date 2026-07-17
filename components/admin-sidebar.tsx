@@ -4,6 +4,7 @@ import { LogOut, ScanFace, LayoutDashboard, Users, Settings, UserCircle2 } from 
 import type { PublicUser } from "@/lib/types"
 import Link from "next/link"
 import { getCurrentUser } from "@/lib/auth"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export async function AdminSidebar() {
   const user = await getCurrentUser()
@@ -31,7 +32,8 @@ export async function AdminSidebar() {
           <UserCircle2 className="size-4" /> Profil
         </Link>
       </nav>
-      <div className="mt-auto pt-4 border-t border-border">
+      <div className="mt-auto flex flex-col gap-4 pt-4 border-t border-border">
+        <ThemeToggle />
         <div className="text-sm font-medium leading-tight mb-2">{user.name}</div>
         <form action={logoutAction}>
           <Button type="submit" variant="outline" size="sm" className="w-full justify-start">

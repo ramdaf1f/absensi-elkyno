@@ -1,40 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
-  id            String      @id @default(uuid())
-  name          String      @db.VarChar(191)
-  email         String      @unique @db.VarChar(191)
-  password_hash String      @db.VarChar(191)
-  role          UserRole    @default(employee)
-  position      String?     @db.VarChar(191)
-  phone         String?     @db.VarChar(20)
-  employee_id   String?     @unique @db.VarChar(191)
-  salary        Decimal?    @db.Decimal(10, 2)
-  status        UserStatus  @default(active)
-  created_at    DateTime    @default(now())
-  updated_at    DateTime    @default(now()) @updatedAt
-  
-  // Relasi balikan untuk attendance
+  id            String       @id @default(uuid())
+  name          String       @db.VarChar(191)
+  email         String       @unique @db.VarChar(191)
+  password_hash String       @db.VarChar(191)
+  role          UserRole     @default(employee)
+  position      String?      @db.VarChar(191)
+  phone         String?      @db.VarChar(20)
+  employee_id   String?      @unique @db.VarChar(191)
+  salary        Decimal?     @db.Decimal(10, 2)
+  status        UserStatus   @default(active)
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @default(now()) @updatedAt
   attendances   Attendance[]
 
   @@map("users")
-}
-
-enum UserRole {
-  employee
-  admin
-}
-
-enum UserStatus {
-  active
-  inactive
 }
 
 model OfficeSetting {
@@ -50,18 +38,15 @@ model OfficeSetting {
 
 model Attendance {
   id            String         @id @default(uuid())
-  user_id       String         
+  user_id       String
   type          AttendanceType
-  photo         String         @db.Text
+  photo         String
   latitude      Decimal        @db.Decimal(10, 7)
   longitude     Decimal        @db.Decimal(10, 7)
   accuracy_m    Decimal?       @db.Decimal(10, 2)
   distance_m    Decimal        @db.Decimal(10, 2)
   within_radius Int            @db.SmallInt
-
   created_at    DateTime       @default(now())
-
-  // Hubungan Foreign Key ke User
   user          User           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
 
   @@index([user_id], map: "idx_attendance_user")
@@ -69,7 +54,26 @@ model Attendance {
   @@map("attendance")
 }
 
+enum UserRole {
+  employee
+  admin
+}
+
+enum UserStatus {
+  active
+  inactive
+}
+
 enum AttendanceType {
   check_in
   check_out
+}
+
+model Holiday {
+  id          String   @id @default(uuid())
+  date        DateTime @db.Date
+  description String   @db.VarChar(191)
+  created_at  DateTime @default(now())
+
+  @@map("holidays")
 }

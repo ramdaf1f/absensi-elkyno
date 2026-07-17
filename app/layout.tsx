@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
+import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
@@ -44,9 +45,18 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="id" className={`bg-background ${inter.variable} ${jetbrainsMono.variable}`}>
+    // 💡 Di sini kita gabungin atributnya jadi satu tag HTML saja, bro:
+    <html 
+      lang="id" 
+      className={`bg-background ${inter.variable} ${jetbrainsMono.variable}`} 
+      suppressHydrationWarning
+    >
       <body className="font-sans antialiased">
-        {children}
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          {children}
+        </ThemeProvider>
+        
+        {/* Analytics component */}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

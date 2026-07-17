@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { login, logout, getCurrentUser } from "@/lib/auth"
-import { getOfficeSettings, updateOfficeSettings, createAttendance, updateEmployee as dbUpdateEmployee, createUser } from "@/lib/db"
+import { getOfficeSettings, updateOfficeSettings, createAttendance, updateEmployee as dbUpdateEmployee, createUser, addHoliday, deleteHoliday } from "@/lib/db"
 import { z } from "zod"
 
 // --- Auth Actions ---
@@ -217,5 +217,43 @@ export async function updateEmployee(
   } catch (error) {
     console.error("Failed to update employee:", error)
     return { error: "Gagal memperbarui data karyawan." }
+  }
+}
+
+// --- Holiday Actions ---
+
+const holidaySchema = z.object({
+  date: z.string().min(1, "Tanggal tidak boleh kosong."),
+  description: z.string().min(1, "Keterangan tidak boleh kosong."),
+})
+
+export type HolidayState = {
+  success?: string
+  error?: string
+}
+
+export async function addHolidayAction(_prevState: HolidayState, formData: FormData): Promise<HolidayState> {
+  const validatedFields = holidaySchema.safeParse(Object.fromEntries(formData))
+  if (!validatedFields.success) {
+    return { error: "Data libur tidak valid." }
+  }
+  try {
+    await addHoliday(validatedFields.data)
+    revalidatePath("/admin/settings")
+    return { success: "Hari libur berhasil ditambahkan." }
+  } catch (error) {
+    console.error("Failed to add holiday:", error)
+    return { error: "Gagal menambahkan hari libur." }
+  }
+}
+
+export async function deleteHolidayAction(id: string): Promise<{ success?: string; error?: string }> {
+  try {
+    await deleteHoliday(id)
+    revalidatePath("/admin/settings")
+    return { success: "Hari libur berhasil dihapus." }
+  } catch (error) {
+    console.error("Failed to delete holiday:", error)
+    return { error: "Gagal menghapus hari libur." }
   }
 }
