@@ -8,19 +8,29 @@ datasource db {
 }
 
 model User {
-  id            String       @id @default(uuid())
-  name          String       @db.VarChar(191)
-  email         String       @unique @db.VarChar(191)
-  password_hash String       @db.VarChar(191)
-  role          UserRole     @default(employee)
-  position      String?      @db.VarChar(191)
-  phone         String?      @db.VarChar(20)
-  employee_id   String?      @unique @db.VarChar(191)
-  salary        Decimal?     @db.Decimal(10, 2)
-  status        UserStatus   @default(active)
-  created_at    DateTime     @default(now())
-  updated_at    DateTime     @default(now()) @updatedAt
-  attendances   Attendance[]
+  id                     String           @id @default(uuid())
+  name                   String           @db.VarChar(191)
+  email                  String           @unique @db.VarChar(191)
+  password_hash          String           @db.VarChar(191)
+  role                   UserRole         @default(employee)
+  position               String?          @db.VarChar(191)
+  department             String?          @db.VarChar(191)
+  phone                  String?          @db.VarChar(20)
+  employee_id            String?          @unique @db.VarChar(191)
+  salary                 Decimal?         @db.Decimal(10, 2)
+  status                 UserStatus       @default(active)
+  check_in_window_start  String           @default("06:00") @db.VarChar(5)
+  check_in_window_end    String           @default("10:00") @db.VarChar(5)
+  check_out_window_start String           @default("15:00") @db.VarChar(5)
+  check_out_window_end   String           @default("23:00") @db.VarChar(5)
+  standard_check_in_time String           @default("08:00") @db.VarChar(5)
+  is_global_admin        Boolean          @default(false)
+  is_test_account        Boolean          @default(false)
+  created_at             DateTime         @default(now())
+  updated_at             DateTime         @default(now()) @updatedAt
+  attendances            Attendance[]
+  employee_offices       EmployeeOffice[]
+  administered_offices   AdminOffice[]
 
   @@map("users")
 }
@@ -37,26 +47,35 @@ model OfficeSetting {
 }
 
 model Attendance {
-  id            String         @id @default(uuid())
-  user_id       String
-  type          AttendanceType
-  photo         String
-  latitude      Decimal        @db.Decimal(10, 7)
-  longitude     Decimal        @db.Decimal(10, 7)
-  accuracy_m    Decimal?       @db.Decimal(10, 2)
-  distance_m    Decimal        @db.Decimal(10, 2)
-  within_radius Int            @db.SmallInt
-  created_at    DateTime       @default(now())
-  user          User           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  id              String                @id @default(uuid())
+  user_id         String
+  office_id       String?
+  type            AttendanceType
+  photo           String
+  photo_url       String?
+  latitude        Decimal               @db.Decimal(10, 7)
+  longitude       Decimal               @db.Decimal(10, 7)
+  accuracy_m      Decimal?              @db.Decimal(10, 2)
+  distance_m      Decimal               @db.Decimal(10, 2)
+  within_radius   Int                   @db.SmallInt
+  status          AttendanceStatus      @default(present)
+  input_method    AttendanceInputMethod @default(self)
+  input_by        String?
+  checkout_missed Boolean               @default(false)
+  created_at      DateTime              @default(now())
+  user            User                  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  office          Office?               @relation(fields: [office_id], references: [id])
 
   @@index([user_id], map: "idx_attendance_user")
   @@index([created_at], map: "idx_attendance_created")
+  @@index([user_id, type, created_at], map: "idx_attendance_user_type_time")
   @@map("attendance")
 }
 
 enum UserRole {
   employee
   admin
+  superadmin
 }
 
 enum UserStatus {
@@ -69,11 +88,88 @@ enum AttendanceType {
   check_out
 }
 
+enum AttendanceStatus {
+  on_time
+  late
+  present
+  alpha
+  leave
+  sick
+  cuti
+}
+
+enum AttendanceInputMethod {
+  self
+  manual_admin
+}
+
 model Holiday {
-  id          String   @id @default(uuid())
-  date        DateTime @db.Date
-  description String   @db.VarChar(191)
-  created_at  DateTime @default(now())
+  id          String       @id @default(uuid())
+  date        DateTime     @db.Date
+  description String       @db.VarChar(191)
+  type        HolidayType  @default(national)
+  office_id   String?
+  created_at  DateTime     @default(now())
+  office      Office?      @relation(fields: [office_id], references: [id])
 
   @@map("holidays")
+}
+
+enum HolidayType {
+  national
+  joint_leave
+  office
+}
+
+model Office {
+  id               String           @id @default(uuid())
+  name             String           @db.VarChar(191)
+  address          String?
+  latitude         Decimal          @db.Decimal(10, 7)
+  longitude        Decimal          @db.Decimal(10, 7)
+  radius_m         Int              @default(50)
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @default(now()) @updatedAt
+  attendances      Attendance[]
+  employee_offices EmployeeOffice[]
+  admin_offices    AdminOffice[]
+  holidays         Holiday[]
+
+  @@map("offices")
+}
+
+model EmployeeOffice {
+  employee_id String
+  office_id   String
+  created_at  DateTime @default(now())
+  employee    User     @relation(fields: [employee_id], references: [id], onDelete: Cascade)
+  office      Office   @relation(fields: [office_id], references: [id], onDelete: Cascade)
+
+  @@id([employee_id, office_id])
+  @@map("employee_offices")
+}
+
+model AdminOffice {
+  admin_id   String
+  office_id  String
+  created_at DateTime @default(now())
+  admin      User     @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+  office     Office   @relation(fields: [office_id], references: [id], onDelete: Cascade)
+
+  @@id([admin_id, office_id])
+  @@map("admin_offices")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actor_id    String?
+  action      String   @db.VarChar(191)
+  entity_type String   @db.VarChar(191)
+  entity_id   String?
+  metadata    Json?
+  created_at  DateTime @default(now())
+
+  @@index([actor_id])
+  @@index([entity_type, entity_id])
+  @@map("audit_logs")
 }
