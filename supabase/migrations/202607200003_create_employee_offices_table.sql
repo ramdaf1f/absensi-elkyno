@@ -1,20 +1,13 @@
 -- TASK-02: Create employee_offices table for multi-office employee assignments.
 
 create table if not exists public.employee_offices (
-  id uuid primary key default gen_random_uuid(),
-  employee_id uuid not null references public.profiles(id) on delete cascade,
-  office_id uuid not null references public.offices(id) on delete cascade,
+  employee_id text not null references public.users(id) on delete cascade,
+  office_id text not null references public.offices(id) on delete cascade,
   is_primary boolean not null default false,
   created_at timestamptz not null default now(),
-  unique (employee_id, office_id)
+
+  primary key (employee_id, office_id)
 );
-
-alter table public.employee_offices
-  alter column is_primary set default false,
-  alter column created_at set default now();
-
-create unique index if not exists employee_offices_employee_id_office_id_key
-  on public.employee_offices (employee_id, office_id);
 
 create unique index if not exists employee_offices_one_primary_per_employee
   on public.employee_offices (employee_id)
