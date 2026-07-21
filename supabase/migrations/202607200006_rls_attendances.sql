@@ -1,4 +1,14 @@
-﻿alter table public.attendance enable row level security;
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name = 'attendance'
+  ) then
+    execute 'alter table public.attendance enable row level security';
+  end if;
+end $$;
 
 drop policy if exists attendance_select_own on public.attendance;
 drop policy if exists attendance_insert_own on public.attendance;

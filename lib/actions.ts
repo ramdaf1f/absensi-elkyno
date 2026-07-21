@@ -54,12 +54,20 @@ export async function updateOfficeAction(_prevState: OfficeState, formData: Form
     return { error: "Data tidak valid." }
   }
   try {
+    const currentUser = await getCurrentUser()
+    console.log('getCurrentUser()', currentUser)
     await updateOfficeSettings(validatedFields.data)
     revalidatePath("/admin/settings")
     return { success: "Pengaturan kantor berhasil diperbarui." }
   } catch (error) {
-    console.error("Failed to update office settings:", error)
-    return { error: "Gagal memperbarui pengaturan kantor." }
+    console.error('Failed to update office settings:', error)
+  
+    return {
+      error:
+        error instanceof Error
+          ? `Gagal memperbarui pengaturan kantor: ${error.message}`
+          : 'Gagal memperbarui pengaturan kantor.',
+    }
   }
 }
 
@@ -460,3 +468,4 @@ export async function deleteHolidayAction(id: string): Promise<{ success?: strin
     return { error: "Gagal menghapus hari libur." }
   }
 }
+

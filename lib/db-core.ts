@@ -2,7 +2,9 @@ import 'dotenv/config'
 import bcrypt from "bcryptjs"
 import { randomUUID } from "crypto"
 import type { AttendanceRecord, AttendanceType, AttendanceWithUser, OfficeSettings, User, Holiday } from "./types"
+import { getSupabaseServerClient } from './supabase-server'
 import { supabase } from './supabase'
+import { supabaseAdmin } from './supabase-admin'
 
 // Helper to map Supabase user to our app's User type
 function fromSupabaseUser(user: any): User | null {
@@ -271,7 +273,7 @@ function getJakartaDayRange(date = new Date()): { start: string; end: string } {
 }
 
 async function getFirstOffice(): Promise<OfficeSettings | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('offices')
     .select('id, name, latitude, longitude, radius_m, updated_at')
     .order('created_at', { ascending: true })
@@ -355,7 +357,7 @@ export async function updateOfficeSettings(input: {
   const currentOffice = await getFirstOffice()
 
   if (currentOffice) {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('offices')
       .update({
         name: input.name,
@@ -365,33 +367,24 @@ export async function updateOfficeSettings(input: {
       })
       .eq('id', currentOffice.id)
 
-    if (error) throw error
+    if (error) throw new Error(error.message)
+  } else {
+    const officeId = randomUUID()
 
-    await supabase
-      .from('office_settings')
-      .upsert({
-        id: 1,
+    const { error } = await supabaseAdmin
+      .from('offices')
+      .insert({
+        id: officeId,
         name: input.name,
         latitude: input.latitude,
         longitude: input.longitude,
         radius_m: input.radiusM,
       })
 
-    return await getOfficeSettings()
+    if (error) throw new Error(error.message)
   }
 
-  const { error: insertOfficeError } = await supabase
-    .from('offices')
-    .insert({
-      name: input.name,
-      latitude: input.latitude,
-      longitude: input.longitude,
-      radius_m: input.radiusM,
-    })
-
-  if (!insertOfficeError) return await getOfficeSettings()
-
-  const { error } = await supabase
+  const { error: settingsError } = await supabaseAdmin
     .from('office_settings')
     .upsert({
       id: 1,
@@ -400,9 +393,9 @@ export async function updateOfficeSettings(input: {
       longitude: input.longitude,
       radius_m: input.radiusM,
     })
-    .select()
-    .single()
-  if (error) throw error
+
+  if (settingsError) throw new Error(settingsError.message)
+
   return await getOfficeSettings()
 }
 
@@ -504,3 +497,6 @@ export async function listAttendanceByMonth(
     createdAt: r.created_at,
   }))
 }
+
+
+

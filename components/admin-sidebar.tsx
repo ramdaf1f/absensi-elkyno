@@ -1,14 +1,31 @@
+'use client'
+
 import { logoutAction } from "@/lib/actions"
 import { Button } from "@/components/ui/button"
 import { LogOut, ScanFace, LayoutDashboard, Users, Settings, UserCircle2 } from "lucide-react"
 import type { PublicUser } from "@/lib/types"
 import Link from "next/link"
-import { getCurrentUser } from "@/lib/auth"
+import { usePathname } from 'next/navigation'
 import { ThemeToggle } from "@/components/theme-toggle"
 
-export async function AdminSidebar() {
-  const user = await getCurrentUser()
-  if (!user) return null
+type AdminSidebarProps = {
+  user: PublicUser
+}
+
+export function AdminSidebar({ user }: AdminSidebarProps) {
+
+  const pathname = usePathname()
+
+  const linkClass = (href: string) => {
+    const isActive =
+      pathname === href || (href !== '/admin' && pathname.startsWith(href))
+
+    return `flex items-center gap-1 rounded-lg px-2 py-2 text-[clamp(0.62rem,2.2vw,0.9rem)] transition-all md:gap-3 md:px-3 md:text-sm ${
+      isActive
+        ? 'bg-primary text-primary-foreground shadow-sm'
+        : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+    }`
+  }
 
   return (
     <aside className="flex w-full flex-col border-b border-border bg-card p-3 md:w-72 md:min-h-screen md:border-b-0 md:border-r md:p-4">
@@ -38,17 +55,24 @@ export async function AdminSidebar() {
       </div>
 
       <nav className="flex flex-row items-center justify-center gap-1 overflow-x-auto whitespace-nowrap md:flex-1 md:flex-col md:items-stretch md:justify-start md:gap-1 md:overflow-visible">
-        <Link href="/admin" className="flex items-center gap-1 rounded-lg px-2 py-2 text-[clamp(0.62rem,2.2vw,0.9rem)] text-white transition-all hover:text-white md:gap-3 md:px-3 md:text-sm">
-          <LayoutDashboard className="size-[clamp(0.95rem,2.1vw,1rem)] md:size-4" /> Dashboard
+        <Link href="/admin" className={linkClass('/admin')}>
+          <LayoutDashboard className="size-[clamp(0.95rem,2.1vw,1rem)] md:size-4" />
+          Dashboard
         </Link>
-        <Link href="/admin/employees" className="flex items-center gap-1 rounded-lg px-2 py-2 text-[clamp(0.62rem,2.2vw,0.9rem)] text-white transition-all hover:text-white md:gap-3 md:px-3 md:text-sm">
-          <Users className="size-[clamp(0.95rem,2.1vw,1rem)] md:size-4" /> Karyawan
+
+        <Link href="/admin/employees" className={linkClass('/admin/employees')}>
+          <Users className="size-[clamp(0.95rem,2.1vw,1rem)] md:size-4" />
+          Karyawan
         </Link>
-        <Link href="/admin/settings" className="flex items-center gap-1 rounded-lg px-2 py-2 text-[clamp(0.62rem,2.2vw,0.9rem)] text-white transition-all hover:text-white md:gap-3 md:px-3 md:text-sm">
-          <Settings className="size-[clamp(0.95rem,2.1vw,1rem)] md:size-4" /> Pengaturan
+
+        <Link href="/admin/settings" className={linkClass('/admin/settings')}>
+          <Settings className="size-[clamp(0.95rem,2.1vw,1rem)] md:size-4" />
+          Pengaturan
         </Link>
-        <Link href="/admin/profile" className="flex items-center gap-1 rounded-lg px-2 py-2 text-[clamp(0.62rem,2.2vw,0.9rem)] text-white transition-all hover:text-white md:gap-3 md:px-3 md:text-sm">
-          <UserCircle2 className="size-[clamp(0.95rem,2.1vw,1rem)] md:size-4" /> Profil
+
+        <Link href="/admin/profile" className={linkClass('/admin/profile')}>
+          <UserCircle2 className="size-[clamp(0.95rem,2.1vw,1rem)] md:size-4" />
+          Profil
         </Link>
       </nav>
 

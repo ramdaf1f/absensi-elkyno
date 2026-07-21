@@ -5,7 +5,17 @@ alter table public.offices enable row level security;
 alter table public.employee_offices enable row level security;
 alter table public.attendance enable row level security;
 alter table public.holidays enable row level security;
-alter table public.audit_logs enable row level security;
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name = 'audit_logs'
+  ) then
+    execute 'alter table public.audit_logs enable row level security';
+  end if;
+end $$;
 
 -- users: self-access only
 
