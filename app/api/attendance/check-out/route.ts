@@ -24,6 +24,14 @@ type AssignedOffice = {
   }
 }
 
+type MissedCheckoutCandidate = {
+  id: string
+  user_id: string
+  user: {
+    check_out_window_end: string
+  }
+}
+
 function isValidLatitude(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= -90 && value <= 90
 }
@@ -34,6 +42,119 @@ function isValidLongitude(value: unknown): value is number {
 
 function isValidAccuracy(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0
+}
+
+function getJakartaCurrentMinutes(now: Date): number | null {
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  })
+
+  const [hours, minutes] = formatter.format(now).split(":")
+  if (!hours || !minutes) return null
+  return Number(hours) * 60 + Number(minutes)
+}
+
+function parseWindowMinutes(value: string): number | null {
+  const match = /^([0-1]\d|2[0-3]):([0-5]\d)$/.exec(value)
+  if (!match) return null
+  return Number(match[1]) * 60 + Number(match[2])
+}
+
+function hasWindowEnded(now: Date, end: string): boolean {
+  const currentMinutes = getJakartaCurrentMinutes(now)
+  const endMinutes = parseWindowMinutes(end)
+  if (currentMinutes === null || endMinutes === null) return false
+
+  if (endMinutes < 6 * 60) {
+    return currentMinutes > endMinutes && currentMinutes < 6 * 60
+  }
+
+  return currentMinutes > endMinutes
+}
+
+async function markCheckoutMissed(now: Date): Promise<number> {
+  const { start, end } = getJakartaDayRange(now)
+  const [checkIns, checkOuts] = await Promise.all([
+    prisma.attendance.findMany({
+      where: {
+        type: "check_in",
+        created_at: {
+          gte: start,
+          lte: end,
+        },
+        checkout_missed: false,
+      },
+      select: {
+        id: true,
+        user_id: true,
+        user: {
+          select: {
+            check_out_window_end: true,
+          },
+        },
+      },
+    }),
+    prisma.attendance.findMany({
+      where: {
+        type: "check_out",
+        created_at: {
+          gte: start,
+          lte: end,
+        },
+      },
+      select: {
+        user_id: true,
+      },
+    }),
+  ])
+
+  const checkedOutUsers = new Set(checkOuts.map((record) => record.user_id))
+  const updates = checkIns.filter((candidate: MissedCheckoutCandidate) => {
+    if (checkedOutUsers.has(candidate.user_id)) return false
+    return hasWindowEnded(now, candidate.user.check_out_window_end)
+  })
+
+  if (updates.length === 0) return 0
+
+  const result = await prisma.attendance.updateMany({
+    where: {
+      id: {
+        in: updates.map((candidate) => candidate.id),
+      },
+    },
+    data: {
+      checkout_missed: true,
+    },
+  })
+
+  return result.count
+}
+
+export async function PATCH() {
+  const currentUser = await getCurrentUser()
+
+  if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "superadmin")) {
+    return NextResponse.json(
+      {
+        success: false,
+        code: "FORBIDDEN",
+        message: "Only admin can trigger checkout_missed",
+      },
+      { status: 403 },
+    )
+  }
+
+  const now = getJakartaNow()
+  const updated = await markCheckoutMissed(now)
+
+  return NextResponse.json({
+    success: true,
+    updated,
+    serverTime: formatJakartaIso(now),
+  })
 }
 
 export async function POST(request: Request) {
