@@ -497,6 +497,3 @@ export async function listAttendanceByMonth(
     createdAt: r.created_at,
   }))
 }
-
-
-
