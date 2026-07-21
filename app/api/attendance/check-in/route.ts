@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth"
+import { distanceInMeters } from "@/lib/geo"
 import { prisma } from "@/lib/prisma"
 
 type CheckInBody = {
@@ -8,6 +9,16 @@ type CheckInBody = {
   accuracy?: unknown
   photoUrl?: unknown
   deviceTime?: unknown
+}
+
+type AssignedOffice = {
+  office_id: string
+  office: {
+    id: string
+    latitude: unknown
+    longitude: unknown
+    radius_m: number
+  }
 }
 
 function isValidLatitude(value: unknown): value is number {
@@ -125,18 +136,75 @@ export async function POST(request: Request) {
     )
   }
 
+  const assignedOffices = await prisma.employeeOffice.findMany({
+    where: {
+      employee_id: currentUser.id,
+    },
+    select: {
+      office_id: true,
+      office: {
+        select: {
+          id: true,
+          latitude: true,
+          longitude: true,
+          radius_m: true,
+        },
+      },
+    },
+  })
+
+  if (assignedOffices.length === 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        code: "OFFICE_NOT_ASSIGNED",
+        message: "No office assignment found",
+      },
+      { status: 403 },
+    )
+  }
+
+  const nearestOffice = assignedOffices
+    .map((assignment: AssignedOffice) => {
+      const officeLatitude = Number(assignment.office.latitude)
+      const officeLongitude = Number(assignment.office.longitude)
+      const distanceM = distanceInMeters(body.latitude as number, body.longitude as number, officeLatitude, officeLongitude)
+
+      return {
+        officeId: assignment.office_id,
+        distanceM,
+        radiusM: assignment.office.radius_m,
+      }
+    })
+    .sort((left, right) => left.distanceM - right.distanceM)[0]
+
+  if (nearestOffice.distanceM > nearestOffice.radiusM) {
+    return NextResponse.json(
+      {
+        success: false,
+        code: "OUTSIDE_RADIUS",
+        message: "You are outside the allowed office radius",
+        officeId: nearestOffice.officeId,
+        distanceM: nearestOffice.distanceM,
+        radiusM: nearestOffice.radiusM,
+      },
+      { status: 403 },
+    )
+  }
+
   try {
     const attendance = await prisma.attendance.create({
       data: {
         user_id: currentUser.id,
+        office_id: nearestOffice.officeId,
         type: "check_in",
         latitude: body.latitude,
         longitude: body.longitude,
         accuracy_m: body.accuracy,
         photo: body.photoUrl ?? "pending",
         photo_url: body.photoUrl ?? null,
-        distance_m: 0,
-        within_radius: 0,
+        distance_m: nearestOffice.distanceM,
+        within_radius: 1,
         status: "present",
         input_method: "self",
       },
