@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma"
 
 const MAX_GPS_ACCURACY_M = 50
 
-type CheckInBody = {
+type CheckOutBody = {
   latitude?: unknown
   longitude?: unknown
   accuracy?: unknown
@@ -50,10 +50,10 @@ export async function POST(request: Request) {
     )
   }
 
-  let body: CheckInBody
+  let body: CheckOutBody
 
   try {
-    body = (await request.json()) as CheckInBody
+    body = (await request.json()) as CheckOutBody
   } catch {
     return NextResponse.json(
       {
@@ -134,17 +134,14 @@ export async function POST(request: Request) {
   }
 
   const now = getJakartaNow()
-  const isWithinWindow = isTimeWithinWindow(now, currentUser.check_in_window_start, currentUser.check_in_window_end)
+  const isWithinWindow = isTimeWithinWindow(now, currentUser.check_out_window_start, currentUser.check_out_window_end)
 
   if (!isWithinWindow) {
     return NextResponse.json(
       {
         success: false,
         code: "WINDOW_CLOSED",
-        message: "Check-in is not allowed at this time",
-        windowStart: currentUser.check_in_window_start,
-        windowEnd: currentUser.check_in_window_end,
-        serverTime: formatJakartaIso(now),
+        message: "Check-out is not allowed at this time",
       },
       { status: 403 },
     )
@@ -166,14 +163,40 @@ export async function POST(request: Request) {
     },
   })
 
-  if (existingCheckIn) {
+  if (!existingCheckIn) {
     return NextResponse.json(
       {
         success: false,
-        code: "DUPLICATE_ATTENDANCE",
-        message: "You have already checked in today",
-        attendanceId: existingCheckIn.id,
-        checkedInAt: formatJakartaIso(existingCheckIn.created_at),
+        code: "CHECKIN_REQUIRED",
+        message: "You must check in before checking out",
+      },
+      { status: 409 },
+    )
+  }
+
+  const existingCheckOut = await prisma.attendance.findFirst({
+    where: {
+      user_id: currentUser.id,
+      type: "check_out",
+      created_at: {
+        gte: start,
+        lte: end,
+      },
+    },
+    select: {
+      id: true,
+      created_at: true,
+    },
+  })
+
+  if (existingCheckOut) {
+    return NextResponse.json(
+      {
+        success: false,
+        code: "ALREADY_CHECKED_OUT",
+        message: "You have already checked out today",
+        attendanceId: existingCheckOut.id,
+        checkedOutAt: formatJakartaIso(existingCheckOut.created_at),
       },
       { status: 409 },
     )
@@ -240,7 +263,7 @@ export async function POST(request: Request) {
       data: {
         user_id: currentUser.id,
         office_id: nearestOffice.officeId,
-        type: "check_in",
+        type: "check_out",
         latitude: body.latitude,
         longitude: body.longitude,
         accuracy_m: body.accuracy,
