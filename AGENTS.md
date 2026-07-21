@@ -19,3 +19,7 @@
 ## Important
 
 Jika task membutuhkan lebih dari 3 file atau mencampur frontend dan backend, hentikan dan minta task dipecah terlebih dahulu.
+
+## Struktur Repository
+
+Sebelum melakukan pencarian file, baca `struktur.md` dan gunakan file yang dipetakan di sana. Hindari scanning seluruh repository kecuali file yang dibutuhkan tidak tercantum di `struktur.md`.
