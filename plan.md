@@ -6,7 +6,17 @@
 
 Dokumen ini merinci rencana pengembangan sistem absensi karyawan berdasarkan fase-fase yang telah diusulkan dalam PRD, beserta daftar tugas (tasks) yang perlu diselesaikan di setiap fasenya.
 
----
+## Status Perencanaan
+
+- PRD: Frozen
+- PLAN: Frozen sampai Fase 1 selesai
+- Perubahan arsitektur hanya boleh dilakukan jika ditemukan blocker saat implementasi.
+
+- [x] TASK-01: Setup PostGIS Extension (2026-07-20)
+- [x] TASK-02: Create employee_offices Table (2026-07-20)
+- [x] TASK-03: Add Personal Attendance Window Fields (2026-07-20)
+- [x] TASK-06: Server-side Geofence Validation (2026-07-20)
+- [x] TASK-08: Implement Check-out API Endpoint and Duplicate Attendance Prevention (2026-07-20)
 
 ## Fase 1A — Database Foundation
 

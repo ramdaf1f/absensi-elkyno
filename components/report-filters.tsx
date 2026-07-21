@@ -42,8 +42,8 @@ export function ReportFilters({
   )
 
   return (
-    <div className="flex flex-wrap gap-3">
-      <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:max-w-[180px]">
         <label htmlFor="f-month" className="text-xs font-medium text-muted-foreground">Bulan</label>
         <select id="f-month" className={selectClass} value={month} onChange={(e) => update({ month: Number(e.target.value) })}>
           {MONTHS.map((m, i) => (
@@ -51,7 +51,7 @@ export function ReportFilters({
           ))}
         </select>
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:max-w-[180px]">
         <label htmlFor="f-year" className="text-xs font-medium text-muted-foreground">Tahun</label>
         <select id="f-year" className={selectClass} value={year} onChange={(e) => update({ year: Number(e.target.value) })}>
           {years.map((y) => (
@@ -59,7 +59,7 @@ export function ReportFilters({
           ))}
         </select>
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:max-w-[260px]">
         <label htmlFor="f-emp" className="text-xs font-medium text-muted-foreground">Karyawan</label>
         <select id="f-emp" className={selectClass} value={userId} onChange={(e) => update({ userId: e.target.value })}>
           <option value="">Semua karyawan</option>

@@ -33,15 +33,48 @@ interface Coords {
   accuracy: number
 }
 
+interface AttendanceWindow {
+  checkInWindowStart?: string | null
+  checkInWindowEnd?: string | null
+  checkOutWindowStart?: string | null
+  checkOutWindowEnd?: string | null
+}
+
+const MAX_GPS_ACCURACY_M = 100
+
+function minutesNow(): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date())
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? 0)
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? 0)
+  return hour * 60 + minute
+}
+
+function parseTime(value: string | null | undefined, fallback: string): number {
+  const [hour, minute] = (value || fallback).split(":").map(Number)
+  return hour * 60 + minute
+}
+
+function inWindow(now: number, start: number, end: number): boolean {
+  if (start <= end) return now >= start && now <= end
+  return now >= start || now <= end
+}
+
 export function AttendanceClient({
   userName,
-  office,
+  offices,
+  attendanceWindow,
   records,
   initialHasCheckIn,
   initialHasCheckOut,
 }: {
   userName: string
-  office: OfficeSettings
+  offices: OfficeSettings[]
+  attendanceWindow: AttendanceWindow
   records: TodayRecord[]
   initialHasCheckIn: boolean
   initialHasCheckOut: boolean
@@ -64,11 +97,48 @@ export function AttendanceClient({
 
   const nextType: AttendanceType | null = !initialHasCheckIn ? "check_in" : !initialHasCheckOut ? "check_out" : null
 
-  const distance = coords ? distanceInMeters(coords.latitude, coords.longitude, office.latitude, office.longitude) : null
-  const withinRadius = distance !== null ? distance <= office.radiusM : false
+  const nearestOffice = coords
+    ? offices
+        .map((office) => ({
+          office,
+          distance: distanceInMeters(coords.latitude, coords.longitude, office.latitude, office.longitude),
+        }))
+        .sort((a, b) => a.distance - b.distance)[0]
+    : null
+  const activeOffice = nearestOffice?.office ?? offices[0]
+  const distance = nearestOffice?.distance ?? null
+  const withinRadius = coords
+    ? offices.some(
+        (office) => distanceInMeters(coords.latitude, coords.longitude, office.latitude, office.longitude) <= office.radiusM,
+      )
+    : false
+  const hasAccurateGps = coords ? coords.accuracy <= MAX_GPS_ACCURACY_M : false
+  const nowMinutes = minutesNow()
+  const activeWindow =
+    nextType === "check_in"
+      ? {
+          start: attendanceWindow.checkInWindowStart || "06:00",
+          end: attendanceWindow.checkInWindowEnd || "10:00",
+        }
+      : {
+          start: attendanceWindow.checkOutWindowStart || "15:00",
+          end: attendanceWindow.checkOutWindowEnd || "23:00",
+        }
+  const withinTimeWindow = nextType
+    ? inWindow(
+        nowMinutes,
+        parseTime(activeWindow.start, nextType === "check_in" ? "06:00" : "15:00"),
+        parseTime(activeWindow.end, nextType === "check_in" ? "10:00" : "23:00"),
+      )
+    : false
+  const canUseCamera = !!nextType && !!coords && withinRadius && hasAccurateGps && withinTimeWindow
 
   // --- Camera ---
   const startCamera = useCallback(async () => {
+    if (!canUseCamera) {
+      setCameraError("Kamera hanya aktif saat lokasi, akurasi GPS, dan jam absen sudah valid.")
+      return
+    }
     setCameraError(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -84,7 +154,7 @@ export function AttendanceClient({
     } catch {
       setCameraError("Tidak dapat mengakses kamera. Pastikan izin kamera diaktifkan.")
     }
-  }, [])
+  }, [canUseCamera])
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop())
@@ -172,7 +242,7 @@ export function AttendanceClient({
     }
   }, [nextType, photo, coords, router])
 
-  const canSubmit = !!nextType && !!photo && !!coords && withinRadius && !submitting
+  const canSubmit = !!photo && canUseCamera && !submitting
 
   return (
     <div className="flex flex-col gap-4">
@@ -200,7 +270,7 @@ export function AttendanceClient({
         <CardContent className="flex flex-col gap-3">
           <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-sm">
             <span className="text-muted-foreground">Kantor</span>
-            <span className="font-medium">{office.name}</span>
+            <span className="font-medium">{activeOffice?.name ?? "Kantor"}</span>
           </div>
 
           {locationError ? (
@@ -222,8 +292,8 @@ export function AttendanceClient({
               >
                 {withinRadius ? <CheckCircle2 className="size-4" /> : <XCircle className="size-4" />}
                 {withinRadius
-                  ? `Dalam radius kantor (maks. ${office.radiusM} m)`
-                  : `Di luar radius. Harus ≤ ${office.radiusM} m dari kantor.`}
+                  ? `Dalam radius kantor (maks. ${activeOffice?.radiusM ?? 0} m)`
+                  : `Di luar radius. Harus ≤ ${activeOffice?.radiusM ?? 0} m dari kantor.`}
               </div>
             </div>
           ) : (
@@ -277,7 +347,7 @@ export function AttendanceClient({
 
           <div className="flex gap-2">
             {!photo && !cameraOn ? (
-              <Button variant="outline" size="lg" className="flex-1" onClick={startCamera}>
+              <Button variant="outline" size="lg" className="flex-1" onClick={startCamera} disabled={!canUseCamera}>
                 <Camera className="size-4" /> Aktifkan Kamera
               </Button>
             ) : null}
@@ -325,9 +395,11 @@ export function AttendanceClient({
         </div>
       )}
 
-      {nextType && (!photo || !withinRadius) ? (
+      {nextType && (!photo || !canUseCamera) ? (
         <p className="text-center text-xs text-muted-foreground">
           {!withinRadius ? "Dekati lokasi kantor hingga dalam radius, " : ""}
+          {coords && !hasAccurateGps ? "pastikan akurasi GPS cukup baik, " : ""}
+          {!withinTimeWindow ? `tunggu window ${activeWindow.start}-${activeWindow.end}, ` : ""}
           {!photo ? "ambil foto wajah terlebih dahulu " : ""}
           untuk mengaktifkan tombol absen.
         </p>

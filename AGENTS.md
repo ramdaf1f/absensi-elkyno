@@ -23,3 +23,22 @@ Jika task membutuhkan lebih dari 3 file atau mencampur frontend dan backend, hen
 ## Struktur Repository
 
 Sebelum melakukan pencarian file, baca `struktur.md` dan gunakan file yang dipetakan di sana. Hindari scanning seluruh repository kecuali file yang dibutuhkan tidak tercantum di `struktur.md`.
+
+## No Discovery Mode
+
+Jika task sudah memiliki:
+
+* `Files`
+* `Objective`
+* `Rules`
+* `Forbidden`
+* `Acceptance Criteria`
+
+maka agent HARUS:
+
+* langsung membuka file yang disebut di `Files`,
+* tidak melakukan pencarian repository,
+* tidak membuka `package.json`,
+* tidak mencari environment variable,
+* tidak membuka folder di luar daftar file,
+* dan langsung mengimplementasikan perubahan.

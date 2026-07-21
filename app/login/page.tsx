@@ -5,7 +5,7 @@ import { MapPin, ScanFace } from "lucide-react"
 
 export default async function LoginPage() {
   const user = await getCurrentUser()
-  if (user) redirect(user.role === "admin" ? "/admin" : "/absen")
+  if (user) redirect(user.role === "admin" || user.role === "superadmin" ? "/admin" : "/absen")
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-10">

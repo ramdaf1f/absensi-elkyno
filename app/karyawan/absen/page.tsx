@@ -1,6 +1,9 @@
 ﻿'use client'
 
+import { useState } from 'react'
 import { AttendanceButton } from '@/components/attendance-button'
+import { CameraCapture } from '@/components/camera-capture'
+import { checkIn, checkOut } from '@/lib/api/attendance'
 import { useGeolocation } from '@/hooks/use-geolocation'
 
 const OFFICE = {
@@ -41,6 +44,11 @@ function distanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number
 export default function AttendancePage() {
   const today = new Date()
   const geoState = useGeolocation()
+  const [selfieFile, setSelfieFile] = useState<File | null>(null)
+  const [selfiePreview, setSelfiePreview] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [attendanceStatus, setAttendanceStatus] = useState<'idle' | 'checked_in' | 'checked_out'>('idle')
+  const [message, setMessage] = useState<string | null>(null)
   const distanceM =
     geoState.latitude !== null && geoState.longitude !== null
       ? Math.round(distanceInMeters(geoState.latitude, geoState.longitude, OFFICE.latitude, OFFICE.longitude))
@@ -54,6 +62,63 @@ export default function AttendancePage() {
       geoState.error === 'permission_denied' ? 'Izin lokasi ditolak' : geoState.error === 'unavailable' ? 'GPS tidak tersedia' : geoState.error
   } else if (geoState.latitude !== null && geoState.longitude !== null && geoState.accuracy !== null) {
     locationStatus = `Lat: ${geoState.latitude.toFixed(6)}\nLng: ${geoState.longitude.toFixed(6)}\nAkurasi: ${Math.round(geoState.accuracy)} m\nJarak ke kantor: ${distanceM !== null ? `${distanceM} m` : '-'} `
+  }
+
+  function buildPayload() {
+    if (geoState.latitude === null || geoState.longitude === null || geoState.accuracy === null) {
+      return null
+    }
+
+    return {
+      latitude: geoState.latitude,
+      longitude: geoState.longitude,
+      accuracy: geoState.accuracy,
+      photoUrl: selfieFile ? 'local-selfie.jpg' : undefined,
+      deviceTime: new Date().toISOString(),
+    }
+  }
+
+  async function handleCheckIn() {
+    const payload = buildPayload()
+    if (!payload) {
+      setMessage('Lokasi belum lengkap')
+      return
+    }
+
+    if (!selfieFile) {
+      setMessage('Selfie belum diambil')
+      return
+    }
+
+    setIsSubmitting(true)
+    setMessage(null)
+    const response = await checkIn(payload)
+    if (response.success) {
+      setAttendanceStatus('checked_in')
+      setMessage('Absen masuk berhasil')
+    } else {
+      setMessage(response.message ?? 'Terjadi kesalahan')
+    }
+    setIsSubmitting(false)
+  }
+
+  async function handleCheckOut() {
+    const payload = buildPayload()
+    if (!payload) {
+      setMessage('Lokasi belum lengkap')
+      return
+    }
+
+    setIsSubmitting(true)
+    setMessage(null)
+    const response = await checkOut(payload)
+    if (response.success) {
+      setAttendanceStatus('checked_out')
+      setMessage('Absen pulang berhasil')
+    } else {
+      setMessage(response.message ?? 'Terjadi kesalahan')
+    }
+    setIsSubmitting(false)
   }
 
   return (
@@ -96,10 +161,37 @@ export default function AttendancePage() {
         </dl>
       </section>
 
+      {selfiePreview ? (
+        <img src={selfiePreview} alt="Selfie preview" className="h-48 w-full rounded-xl border object-cover" />
+      ) : null}
+      <p className="text-sm text-muted-foreground">{selfieFile ? 'Selfie siap dikirim' : 'Selfie belum diambil'}</p>
+
+      <CameraCapture
+        disabled={!canCheckIn}
+        onCapture={(file, previewUrl) => {
+          setSelfieFile(file)
+          setSelfiePreview(previewUrl)
+        }}
+      />
+
       <div className="space-y-3">
-        <AttendanceButton label="Check-in" disabled={!canCheckIn} variant="checkin" />
-        <AttendanceButton label="Check-out" disabled variant="checkout" />
+        <AttendanceButton
+          label={attendanceStatus === 'checked_in' ? 'Sudah Absen Datang' : 'Check-in'}
+          disabled={!canCheckIn || !selfieFile || attendanceStatus !== 'idle'}
+          loading={isSubmitting && attendanceStatus === 'idle'}
+          variant="checkin"
+          onClick={handleCheckIn}
+        />
+        <AttendanceButton
+          label={attendanceStatus === 'checked_out' ? 'Sudah Absen Pulang' : 'Check-out'}
+          disabled={attendanceStatus !== 'checked_in'}
+          loading={isSubmitting && attendanceStatus === 'checked_in'}
+          variant="checkout"
+          onClick={handleCheckOut}
+        />
       </div>
+
+      {message ? <div className="rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">{message}</div> : null}
 
       <p className="text-center text-xs text-muted-foreground">
         Tombol akan aktif setelah lokasi dan waktu valid.

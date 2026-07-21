@@ -74,6 +74,12 @@ export function AddEmployeeForm() {
         </div>
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="department">Departemen (Opsional)</Label>
+        <Input id="department" name="department" placeholder="cth: Operasional / HR / Finance" />
+        {state?.errors?.department && <p className="text-sm text-destructive">{state.errors.department[0]}</p>}
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="phone">No. Telepon (Opsional)</Label>
@@ -99,6 +105,39 @@ export function AddEmployeeForm() {
           </SelectContent>
         </Select>
         {state?.errors?.status && <p className="text-sm text-destructive">{state.errors.status[0]}</p>}
+      </div>
+
+      <div className="rounded-lg border border-border p-4">
+        <h3 className="text-sm font-semibold">Window Absensi Personal</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Dipakai server untuk menentukan kapan tombol dan submit absen boleh aktif.
+        </p>
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="checkInWindowStart">Mulai Absen Datang</Label>
+            <Input id="checkInWindowStart" name="checkInWindowStart" type="time" defaultValue="06:00" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="checkInWindowEnd">Akhir Absen Datang</Label>
+            <Input id="checkInWindowEnd" name="checkInWindowEnd" type="time" defaultValue="10:00" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="standardCheckInTime">Jam Masuk Standar</Label>
+            <Input id="standardCheckInTime" name="standardCheckInTime" type="time" defaultValue="08:00" required />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="checkOutWindowStart">Mulai Absen Pulang</Label>
+                <Input id="checkOutWindowStart" name="checkOutWindowStart" type="time" defaultValue="15:00" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="checkOutWindowEnd">Akhir Absen Pulang</Label>
+                <Input id="checkOutWindowEnd" name="checkOutWindowEnd" type="time" defaultValue="23:00" required />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-end">

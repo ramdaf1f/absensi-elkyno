@@ -135,8 +135,16 @@ export function EmployeeList({ employees }: { employees: User[] }) {
             <Input name="name" defaultValue={editing.name ?? ''} placeholder="Nama Lengkap" required />
             <Input name="employee_id" defaultValue={editing.employee_id ?? ''} placeholder="ID Pegawai" />
             <Input name="position" defaultValue={editing.position ?? ''} placeholder="Jabatan" />
+            <Input name="department" defaultValue={editing.department ?? ''} placeholder="Departemen" />
             <Input name="phone" defaultValue={editing.phone ?? ''} placeholder="Nomor HP" />
             <Input name="salary" type="number" step="any" defaultValue={editing.salary ?? ''} placeholder="Gaji (contoh: 5000000)" />
+            <div className="grid grid-cols-2 gap-2">
+              <Input name="checkInWindowStart" type="time" defaultValue={editing.checkInWindowStart ?? '06:00'} aria-label="Mulai absen datang" />
+              <Input name="checkInWindowEnd" type="time" defaultValue={editing.checkInWindowEnd ?? '10:00'} aria-label="Akhir absen datang" />
+              <Input name="standardCheckInTime" type="time" defaultValue={editing.standardCheckInTime ?? '08:00'} aria-label="Jam masuk standar" />
+              <Input name="checkOutWindowStart" type="time" defaultValue={editing.checkOutWindowStart ?? '15:00'} aria-label="Mulai absen pulang" />
+              <Input name="checkOutWindowEnd" type="time" defaultValue={editing.checkOutWindowEnd ?? '23:00'} aria-label="Akhir absen pulang" />
+            </div>
             <select name="status" defaultValue={editing.status ?? 'active'} className="border p-2 rounded">
               <option value="active">Aktif</option>
               <option value="inactive">Non-Aktif</option>

@@ -1,3 +1,4 @@
+
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getOfficeSettings, getHolidays } from "@/lib/db";
@@ -8,7 +9,7 @@ import { HolidayManager } from "@/components/holiday-manager";
 export default async function AdminSettingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (user.role !== "admin") redirect("/absen");
+  if (user.role !== "admin" && user.role !== "superadmin") redirect("/absen");
 
   let officeSettings, holidays;
   try {
@@ -23,7 +24,7 @@ export default async function AdminSettingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <AppHeader user={user} subtitle="Pengaturan Admin" />
+      {/* <AppHeader user={user} showBrand={false} /> */}
       <div className="grid gap-4 lg:grid-cols-2 items-start">
         <OfficeSettingsForm office={officeSettings} />
         <HolidayManager holidays={holidays} />

@@ -134,7 +134,14 @@ export async function POST(request: Request) {
   }
 
   const now = getJakartaNow()
-  const isWithinWindow = isTimeWithinWindow(now, currentUser.check_in_window_start, currentUser.check_in_window_end)
+  const checkInWindowStart = currentUser.checkInWindowStart ?? '06:00'
+  const checkInWindowEnd = currentUser.checkInWindowEnd ?? '10:00'
+
+  const isWithinWindow = isTimeWithinWindow(
+    now,
+    checkInWindowStart,
+    checkInWindowEnd,
+  )
 
   if (!isWithinWindow) {
     return NextResponse.json(
@@ -142,8 +149,8 @@ export async function POST(request: Request) {
         success: false,
         code: "WINDOW_CLOSED",
         message: "Check-in is not allowed at this time",
-        windowStart: currentUser.check_in_window_start,
-        windowEnd: currentUser.check_in_window_end,
+        windowStart: checkInWindowStart,
+        windowEnd: checkInWindowEnd,
         serverTime: formatJakartaIso(now),
       },
       { status: 403 },

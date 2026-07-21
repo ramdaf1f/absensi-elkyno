@@ -161,3 +161,24 @@ Buka:
 * Relasi multi-office menggunakan tabel `employee_offices` dengan composite primary key `(employee_id, office_id)`.
 * `office_settings` masih legacy/fallback dan belum dihapus.
 * Jangan membuat migration baru tanpa mengecek `prisma/schema.prisma` terlebih dahulu.
+
+## Single Source of Truth
+
+### Prisma
+
+* `lib/prisma.ts` → SATU-SATUNYA Prisma client. Jangan buat instance baru.
+
+### Supabase Server
+
+* `lib/supabase.ts` → helper server/client untuk route handler dan server actions.
+
+### Auth
+
+* `lib/auth.ts` → helper mendapatkan user/session server-side.
+
+### Attendance API
+
+* `app/api/attendance/check-in/route.ts`
+* `app/api/attendance/check-out/route.ts`
+
+Gunakan file di atas tanpa melakukan pencarian repository tambahan.

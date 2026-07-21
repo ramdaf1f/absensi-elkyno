@@ -11,21 +11,27 @@ import { EmployeeViewToggle } from "./employee-view-toggle"
 export default async function EmployeesPage() {
   const user = await getCurrentUser()
   if (!user) redirect("/login")
-  if (user.role !== "admin") redirect("/absen")
+  if (user.role !== "admin" && user.role !== "superadmin") redirect("/absen")
 
   const employees = (await listEmployees()).map((employee) => ({
     id: employee.id,
     name: employee.name,
     email: employee.email,
     position: employee.position,
+    department: employee.department,
     phone: employee.phone,
     employee_id: employee.employee_id,
     status: employee.status,
+    checkInWindowStart: employee.checkInWindowStart,
+    checkInWindowEnd: employee.checkInWindowEnd,
+    checkOutWindowStart: employee.checkOutWindowStart,
+    checkOutWindowEnd: employee.checkOutWindowEnd,
+    standardCheckInTime: employee.standardCheckInTime,
   }))
 
   return (
     <div className="flex flex-col gap-6">
-      <AppHeader user={user} subtitle="Manajemen Karyawan" />
+      {/* <AppHeader user={user} showBrand={false} /> */}
 
       <div className="flex justify-end">
         <Link href="/admin/employees/new" className={buttonVariants()}>

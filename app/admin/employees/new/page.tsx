@@ -7,11 +7,11 @@ import { AddEmployeeForm } from "../add-employee-form"
 export default async function NewEmployeePage() {
   const user = await getCurrentUser()
   if (!user) redirect("/login")
-  if (user.role !== "admin") redirect("/absen")
+  if (user.role !== "admin" && user.role !== "superadmin") redirect("/absen")
 
   return (
     <div className="flex flex-col gap-6">
-      <AppHeader user={user} subtitle="Tambah Karyawan" />
+      <AppHeader user={user} showBrand={false} />
 
       <Card className="max-w-3xl">
         <CardHeader>

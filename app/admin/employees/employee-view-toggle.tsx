@@ -12,9 +12,15 @@ type EmployeeSummary = {
   name: string
   email: string
   position?: string | null
+  department?: string | null
   phone?: string | null
   employee_id?: string | null
   status?: "active" | "inactive"
+  checkInWindowStart?: string | null
+  checkInWindowEnd?: string | null
+  checkOutWindowStart?: string | null
+  checkOutWindowEnd?: string | null
+  standardCheckInTime?: string | null
 }
 
 type ViewMode = "bubble" | "compact"
@@ -99,6 +105,17 @@ function BubbleView({ employees }: EmployeeViewToggleProps) {
               <InfoPill label="ID" value={employee.employee_id || "-"} />
               <InfoPill label="Telepon" value={employee.phone || "-"} />
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <InfoPill label="Departemen" value={employee.department || "-"} />
+              <InfoPill
+                label="Jam Datang"
+                value={`${employee.checkInWindowStart || "06:00"}-${employee.checkInWindowEnd || "10:00"}`}
+              />
+            </div>
+            <InfoPill
+              label="Jam Pulang"
+              value={`${employee.checkOutWindowStart || "15:00"}-${employee.checkOutWindowEnd || "23:00"}`}
+            />
           </CardContent>
         </Card>
       ))}
@@ -123,6 +140,10 @@ function CompactView({ employees }: EmployeeViewToggleProps) {
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:justify-end">
               <Badge variant="outline">{employee.position || "Karyawan"}</Badge>
+              {employee.department && <Badge variant="outline">{employee.department}</Badge>}
+              <Badge variant="secondary">
+                {employee.checkInWindowStart || "06:00"}-{employee.checkInWindowEnd || "10:00"}
+              </Badge>
               {employee.employee_id && <Badge variant="secondary">{employee.employee_id}</Badge>}
               <StatusBadge status={employee.status} />
             </div>

@@ -12,7 +12,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <AppHeader user={user} subtitle="Profil Admin" />
+      {/* <AppHeader user={user} showBrand={false} /> */}
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>

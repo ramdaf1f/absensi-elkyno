@@ -16,7 +16,7 @@ export default async function AdminPage({
 }) {
   const user = await getCurrentUser()
   if (!user) redirect("/login")
-  if (user.role !== "admin") redirect("/absen")
+  if (user.role !== "admin" && user.role !== "superadmin") redirect("/absen")
 
   const sp = await searchParams
   const now = new Date()
@@ -83,9 +83,9 @@ export default async function AdminPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <AppHeader user={user} subtitle="Dashboard Admin" />
-      <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="flex flex-col gap-4">
+      {/* <AppHeader user={user} showBrand={false} /> */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-w-0 flex-col gap-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatCard icon={<CalendarDays className="size-4" />} label="Total Absensi" value={records.length} />
             <StatCard icon={<Users className="size-4" />} label="Karyawan Hadir" value={presentEmployees} />
@@ -95,7 +95,7 @@ export default async function AdminPage({
 
           <Card>
             <CardContent className="flex flex-col gap-4 pt-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold">Laporan Bulanan</h2>
                   <p className="text-sm text-muted-foreground">Riwayat presensi karyawan beserta bukti foto & lokasi.</p>
@@ -108,7 +108,7 @@ export default async function AdminPage({
           </Card>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
           <Card>
             <CardContent className="pt-6">
               <h3 className="font-semibold mb-3 text-sm flex items-center gap-2">

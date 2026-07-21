@@ -63,20 +63,11 @@ function parseWindowMinutes(value: string): number | null {
   return Number(match[1]) * 60 + Number(match[2])
 }
 
-function hasWindowEnded(now: Date, end: string): boolean {
-  const currentMinutes = getJakartaCurrentMinutes(now)
-  const endMinutes = parseWindowMinutes(end)
-  if (currentMinutes === null || endMinutes === null) return false
-
-  if (endMinutes < 6 * 60) {
-    return currentMinutes > endMinutes && currentMinutes < 6 * 60
-  }
-
-  return currentMinutes > endMinutes
-}
-
 async function markCheckoutMissed(now: Date): Promise<number> {
   const { start, end } = getJakartaDayRange(now)
+  const currentMinutes = getJakartaCurrentMinutes(now)
+  if (currentMinutes === null) return 0
+
   const [checkIns, checkOuts] = await Promise.all([
     prisma.attendance.findMany({
       where: {
@@ -112,9 +103,19 @@ async function markCheckoutMissed(now: Date): Promise<number> {
   ])
 
   const checkedOutUsers = new Set(checkOuts.map((record) => record.user_id))
-  const updates = checkIns.filter((candidate: MissedCheckoutCandidate) => {
+  const updates = checkIns.filter((candidate) => {
     if (checkedOutUsers.has(candidate.user_id)) return false
-    return hasWindowEnded(now, candidate.user.check_out_window_end)
+  
+    const windowEnd = candidate.user?.check_out_window_end
+    if (!windowEnd) return false
+  
+    const endMinutes = parseWindowMinutes(windowEnd)
+    if (endMinutes === null) return false
+  
+    const currentMinutes = getJakartaCurrentMinutes(now)
+    if (currentMinutes === null) return false
+  
+    return currentMinutes > endMinutes
   })
 
   if (updates.length === 0) return 0
@@ -254,8 +255,16 @@ export async function POST(request: Request) {
     )
   }
 
+
   const now = getJakartaNow()
-  const isWithinWindow = isTimeWithinWindow(now, currentUser.check_out_window_start, currentUser.check_out_window_end)
+  const checkOutWindowStart = currentUser.checkOutWindowStart ?? '15:00'
+  const checkOutWindowEnd = currentUser.checkOutWindowEnd ?? '23:00'
+  
+  const isWithinWindow = isTimeWithinWindow(
+    now,
+    checkOutWindowStart,
+    checkOutWindowEnd,
+  )
 
   if (!isWithinWindow) {
     return NextResponse.json(
@@ -323,7 +332,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const assignedOffices = await prisma.employeeOffice.findMany({
+    const assignedOffices = await prisma.employeeOffice.findMany({
     where: {
       employee_id: currentUser.id,
     },
@@ -352,7 +361,7 @@ export async function POST(request: Request) {
   }
 
   const nearestOffice = assignedOffices
-    .map((assignment: AssignedOffice) => {
+    .map((assignment: { office_id: string; office: { id: string; latitude: unknown; longitude: unknown; radius_m: number } }) => {
       const officeLatitude = Number(assignment.office.latitude)
       const officeLongitude = Number(assignment.office.longitude)
       const distanceM = distanceInMeters(body.latitude as number, body.longitude as number, officeLatitude, officeLongitude)
@@ -363,7 +372,7 @@ export async function POST(request: Request) {
         radiusM: assignment.office.radius_m,
       }
     })
-    .sort((left, right) => left.distanceM - right.distanceM)[0]
+    .sort((left: { distanceM: number; radiusM: number }, right: { distanceM: number; radiusM: number }) => left.distanceM - right.distanceM)[0] as { officeId: string; distanceM: number; radiusM: number }
 
   if (nearestOffice.distanceM > nearestOffice.radiusM) {
     return NextResponse.json(
